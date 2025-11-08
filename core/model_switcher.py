@@ -15,7 +15,7 @@ import statistics
 
 import structlog
 
-from lm_arena.core.agent import ModelInterface, GenerationRequest, GenerationResponse
+from core.agent import ModelInterface, GenerationRequest, GenerationResponse
 
 logger = structlog.get_logger(__name__)
 
