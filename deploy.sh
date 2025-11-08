@@ -114,7 +114,7 @@ sys.path.insert(0, '.')
 try:
     from core.agent import LMArenaAgent
     from core.model_switcher import ModelSwitcher
-    from promps.prompt_manager import PromptManager
+    from prompts.prompt_manager import PromptManager
     print('✅ Core modules imported successfully')
 except ImportError as e:
     print(f'❌ Import error: {e}')
