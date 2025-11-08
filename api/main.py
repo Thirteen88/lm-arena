@@ -18,13 +18,13 @@ from fastapi.responses import StreamingResponse
 import uvicorn
 import structlog
 
-from ..core.agent import LMArenaAgent, GenerationRequest, GenerationResponse
-from ..core.model_switcher import ModelSwitcher, SwitchingStrategy
-from ..models.openai_model import create_openai_model, create_openai_compatible_model
-from ..models.anthropic_model import create_anthropic_model
-from ..prompts.prompt_manager import PromptManager
-from ..config.settings import get_config, load_config, validate_config
-from .schemas import (
+from lm_arena.core.agent import LMArenaAgent, GenerationRequest, GenerationResponse
+from lm_arena.core.model_switcher import ModelSwitcher, SwitchingStrategy
+from lm_arena.models.openai_model import create_openai_model, create_openai_compatible_model
+from lm_arena.models.anthropic_model import create_anthropic_model
+from lm_arena.prompts.prompt_manager import PromptManager
+from lm_arena.config.settings import get_config, load_config, validate_config
+from lm_arena.api.schemas import (
     ChatRequest,
     ChatResponse,
     StreamChatRequest,

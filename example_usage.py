@@ -7,15 +7,12 @@ Demonstrates how to use LM Arena for various tasks.
 
 import asyncio
 import os
-from lm_arena import (
-    LMArenaAgent,
-    create_openai_model,
-    create_anthropic_model,
-    PromptManager,
-    GenerationRequest,
-    SwitchingStrategy,
-    ModelSwitcher
-)
+# Import directly since we're running from the directory
+from core.agent import LMArenaAgent, GenerationRequest
+from models.openai_model import create_openai_model, create_openai_compatible_model
+from models.anthropic_model import create_anthropic_model
+from prompts.prompt_manager import PromptManager
+from core.model_switcher import SwitchingStrategy, ModelSwitcher
 
 
 async def basic_example():
