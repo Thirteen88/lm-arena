@@ -60,7 +60,12 @@ async def lifespan(app: FastAPI):
 
     # Load configuration
     config = get_config()
-    config.create_directories()
+    # Create necessary directories
+    from pathlib import Path
+    Path(config.data_dir).mkdir(parents=True, exist_ok=True)
+    Path(config.prompts_dir).mkdir(parents=True, exist_ok=True)
+    Path(config.models_dir).mkdir(parents=True, exist_ok=True)
+    Path(config.logs_dir).mkdir(parents=True, exist_ok=True)
 
     # Validate configuration
     issues = validate_config(config)
