@@ -1,0 +1,110 @@
+# LM Arena Configuration Example
+# Copy this file to config.yaml and modify as needed
+
+# Environment settings
+environment: development  # development, testing, staging, production
+debug: true
+
+# API settings
+api:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 1
+  reload: false
+  timeout: 30
+  max_request_size: 16777216  # 16MB
+  enable_docs: true
+  enable_cors: true
+
+# Database configuration (optional)
+database:
+  url: "sqlite:///./lm_arena.db"
+  pool_size: 5
+  max_overflow: 10
+  pool_timeout: 30
+  pool_recycle: 3600
+
+# Redis configuration (optional)
+redis:
+  url: "redis://localhost:6379/0"
+  password: null
+  max_connections: 10
+  retry_on_timeout: true
+
+# Security settings
+security:
+  secret_key: "your-secret-key-here-change-in-production"
+  algorithm: "HS256"
+  access_token_expire_minutes: 30
+  cors_origins:
+    - "*"
+  allowed_hosts:
+    - "*"
+  enable_https: false
+  rate_limit_requests: 100
+  rate_limit_window: 60
+
+# Logging configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_path: null  # Set to a file path to enable file logging
+  max_file_size: 10485760  # 10MB
+  backup_count: 5
+  enable_structlog: true
+
+# Monitoring configuration
+monitoring:
+  enable_metrics: true
+  metrics_port: 9090
+  health_check_interval: 30
+  performance_tracking: true
+  enable_tracing: false
+
+# Model configuration
+models:
+  default_model: "gpt-3.5-turbo"
+  fallback_models:
+    - "gpt-3.5-turbo"
+  timeout: 60
+  max_retries: 3
+  rate_limit_buffer: 5
+  enable_model_switching: true
+  switching_strategy: "load_balanced"  # round_robin, load_balanced, cost_optimized, performance_optimized, priority_based, random, adaptive
+
+# Storage paths
+data_dir: "./data"
+prompts_dir: "./prompts"
+models_dir: "./models"
+logs_dir: "./logs"
+
+# Feature flags
+enable_prompt_management: true
+enable_conversation_history: true
+enable_model_metrics: true
+enable_webhooks: false
+
+# Model-specific configurations (optional)
+# You can add API keys here or use environment variables
+# OpenAI: LM_ARENA_OPENAI_API_KEY
+# Anthropic: LM_ARENA_ANTHROPIC_API_KEY
+
+# Example model configurations
+# model_configs:
+#   openai:
+#     api_key: "sk-..."  # Or use LM_ARENA_OPENAI_API_KEY
+#     models:
+#       - name: "gpt-3.5-turbo"
+#         model_id: "gpt-3.5-turbo"
+#         max_tokens: 4096
+#       - name: "gpt-4"
+#         model_id: "gpt-4"
+#         max_tokens: 8192
+#
+#   anthropic:
+#     api_key: "sk-ant-..."  # Or use LM_ARENA_ANTHROPIC_API_KEY
+#     models:
+#       - name: "claude-3-haiku"
+#         model_id: "claude-3-haiku-20240307"
+#       - name: "claude-3-sonnet"
+#         model_id: "claude-3-sonnet-20240229"
