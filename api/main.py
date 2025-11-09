@@ -14,16 +14,20 @@ from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, HTMLResponse
 import uvicorn
 import structlog
 
 from core.agent import LMArenaAgent, GenerationRequest, GenerationResponse
 from core.model_switcher import ModelSwitcher, SwitchingStrategy
+from core.model_switcher_monitored import MonitoredModelSwitcher
 from models.openai_model import create_openai_model, create_openai_compatible_model
 from models.anthropic_model import create_anthropic_model
 from prompts.prompt_manager import PromptManager
 from config.settings import get_config, load_config, validate_config
+from monitoring.metrics import metrics_collector
+from monitoring.model_monitor import model_monitor
+from monitoring.api import setup_monitoring_routes
 from api.schemas import (
     ChatRequest,
     ChatResponse,
@@ -79,10 +83,17 @@ async def lifespan(app: FastAPI):
     models = {}
     await setup_models(models)
 
-    # Initialize model switcher
+    # Initialize model switcher with monitoring
     if models:
-        model_switcher = ModelSwitcher(models)
+        # Use monitored model switcher for comprehensive analytics
+        model_switcher = MonitoredModelSwitcher(models)
         model_switcher.set_strategy(SwitchingStrategy(config.models.switching_strategy))
+
+        # Set up monitoring routes
+        setup_monitoring_routes(app)
+
+        # Initialize monitoring
+        logger.info("Advanced monitoring system initialized")
 
     # Initialize agent
     agent = LMArenaAgent()
@@ -125,6 +136,47 @@ if get_config().api.enable_cors:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+# Add HTTP request tracking middleware
+@app.middleware("http")
+async def track_requests(request, call_next):
+    """Track HTTP requests for monitoring"""
+    start_time = time.time()
+
+    response = await call_next(request)
+
+    process_time = time.time() - start_time
+
+    # Track request metrics
+    try:
+        method = request.method
+        path = request.url.path
+        status_code = str(response.status_code)
+
+        # Skip health and metrics endpoints to avoid noise
+        if path not in ["/health", "/monitoring/health", "/monitoring/metrics"]:
+            metrics_collector.increment_counter(
+                "http_requests_total",
+                labels={
+                    "method": method,
+                    "endpoint": path,
+                    "status": status_code
+                }
+            )
+
+            metrics_collector.record_histogram(
+                "http_request_duration_seconds",
+                process_time,
+                labels={"method": method, "endpoint": path}
+            )
+
+        # Add response header for monitoring
+        response.headers["X-Process-Time"] = str(process_time)
+
+    except Exception as e:
+        logger.error(f"Failed to track request metrics: {e}")
+
+    return response
 
 
 async def setup_models(models: Dict[str, Any]):
@@ -205,6 +257,12 @@ async def health_check(agent_instance: LMArenaAgent = Depends(get_agent)):
     """Health check endpoint"""
     stats = agent_instance.get_stats()
 
+    # Update conversation count metric
+    metrics_collector.set_gauge(
+        "active_conversations",
+        stats.get("total_conversations", 0)
+    )
+
     return HealthResponse(
         status="healthy" if agent_instance.status.value != "error" else "unhealthy",
         agent_status=agent_instance.status.value,
@@ -212,6 +270,30 @@ async def health_check(agent_instance: LMArenaAgent = Depends(get_agent)):
         total_conversations=stats["total_conversations"],
         uptime="N/A"  # TODO: Implement uptime tracking
     )
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def get_dashboard():
+    """Serve the monitoring dashboard"""
+    try:
+        from pathlib import Path
+        dashboard_path = Path(__file__).parent.parent / "monitoring" / "dashboard.html"
+
+        if dashboard_path.exists():
+            with open(dashboard_path, 'r') as f:
+                return HTMLResponse(content=f.read())
+        else:
+            return HTMLResponse(content="""
+            <html>
+                <body>
+                    <h1>Dashboard Not Found</h1>
+                    <p>The monitoring dashboard file is not available.</p>
+                    <p>Please check that the monitoring system is properly installed.</p>
+                </body>
+            </html>
+            """)
+    except Exception as e:
+        return HTMLResponse(content=f"<h1>Error Loading Dashboard</h1><p>{str(e)}</p>")
 
 
 @app.get("/stats", response_model=StatsResponse)
@@ -386,7 +468,7 @@ async def create_prompt(
 ):
     """Create a new prompt template"""
     try:
-        from ..prompts.prompt_manager import PromptType, PromptCategory
+        from prompts.prompt_manager import PromptType, PromptCategory
 
         prompt_id = prompt_manager_instance.create_prompt(
             name=request.name,
@@ -414,7 +496,7 @@ async def list_prompts(
 ):
     """List prompt templates"""
     try:
-        from ..prompts.prompt_manager import PromptCategory, PromptType
+        from prompts.prompt_manager import PromptCategory, PromptType
 
         filters = {}
         if category:
