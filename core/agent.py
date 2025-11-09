@@ -39,6 +39,15 @@ class MessageRole(str, Enum):
     TOOL = "tool"
 
 
+class ModelProvider(str, Enum):
+    """Model provider types"""
+    OPENAI = "openai"
+    ANTHROPIC = "anthropic"
+    MANUS = "manus"
+    MOCK = "mock"
+    CUSTOM = "custom"
+
+
 @dataclass
 class Message:
     """Message structure for conversations"""

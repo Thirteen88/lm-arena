@@ -23,6 +23,7 @@ from core.model_switcher import ModelSwitcher, SwitchingStrategy
 from core.model_switcher_monitored import MonitoredModelSwitcher
 from models.openai_model import create_openai_model, create_openai_compatible_model
 from models.anthropic_model import create_anthropic_model
+from core.web_automation_model import WebAutomationModel, MockWebAutomationModel
 from prompts.prompt_manager import PromptManager
 from config.settings import get_config, load_config, validate_config
 from monitoring.metrics import metrics_collector
@@ -229,6 +230,31 @@ async def setup_models(models: Dict[str, Any]):
             logger.info("Local model registered", name=model.name, api_base=api_base)
         except Exception as e:
             logger.debug("Local model not available", api_base=api_base, error=str(e))
+
+    # Web Automation Models - NEW INTEGRATION
+    try:
+        # Try to create real web automation model
+        web_model = WebAutomationModel(manus_api_url="http://localhost:8000")
+
+        # Test connection to Manus agent
+        if await web_model.validate_connection():
+            models["web-automation"] = web_model
+            logger.info("Web automation model registered with Manus agent", name="web-automation")
+        else:
+            # Fall back to mock model if Manus agent unavailable
+            mock_web_model = MockWebAutomationModel()
+            models["web-automation-mock"] = mock_web_model
+            logger.info("Mock web automation model registered", name="web-automation-mock")
+
+    except Exception as e:
+        logger.warning("Failed to initialize web automation models", error=str(e))
+        # Still try to create mock model as fallback
+        try:
+            mock_web_model = MockWebAutomationModel()
+            models["web-automation-mock"] = mock_web_model
+            logger.info("Fallback mock web automation model registered", name="web-automation-mock")
+        except Exception as mock_e:
+            logger.error("Failed to create fallback web automation model", error=str(mock_e))
 
 
 # Dependency functions
@@ -656,10 +682,10 @@ def run():
     config = get_config()
 
     uvicorn.run(
-        "lm_arena.api.main:app",
+        app,
         host=config.api.host,
-        port=config.api.port,
-        workers=config.api.workers,
+        port=8999,  # Explicitly set port to 8999
+        workers=1,  # Force workers to 1 for direct execution
         reload=config.api.reload,
         log_level=config.logging.level.lower()
     )
